@@ -1,0 +1,13 @@
+fastapi
+fastapi-mcp
+uvicorn
+pydantic
+google-auth
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+streamlit
+httpx
+openpyxl
+pandas
+google-generativeai
