@@ -1,25 +1,26 @@
-from fastapi import FastAPI
-from fastapi_mcp import FastApiMCP
+from fastmcp import FastMCP
 from pydantic import BaseModel
 from app.csv_db import add_user, list_users
 
-app = FastAPI()
-mcp = FastApiMCP(app, name="Local CSV Registration Bot")
+mcp = FastMCP(name="User Registration server")
 
 class Registration(BaseModel):
     name: str
     email: str
     dob: str
 
-@app.post("/register", operation_id="register_user", summary="Register a user")
-def register_user(data: Registration):
-    add_user(data.name, data.email, data.dob)
-    return {"status":"success","message": f"✅ {data.name} registered successfully."}
+@mcp.tool()
+def register_user(name: str, email: str, dob: str ) -> str:
+    """Register a new user """
+    add_user(name, email, dob)
+    return f"User {name} registered successfully."
 
-@app.get("/registrations", operation_id="get_registrations", summary="Get all registrations")
+@mcp.tool()
 def get_registrations():
     users = list_users()
     return {"users": users}
 
 # Enable MCP-compatible tool exposure at /mcp
-mcp.mount()
+
+if __name__=="__main__":
+    mcp.run(transport="streamable-http")
