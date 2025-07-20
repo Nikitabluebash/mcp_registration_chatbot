@@ -1,79 +1,38 @@
-import google.generativeai as genai
-import httpx
-import json
-import sys
+from fastmcp import Client
+from google import genai 
+import asyncio
+import os 
+from dotenv import load_dotenv
 
-# Set your Gemini API Key here
-genai.configure(api_key="AIzaSyANZqiFk73hag0hEVeiqYO8TH4rpzhAU2w")
+load_dotenv()
 
-model = genai.GenerativeModel(
-    model_name="gemini-2.5-pro",
-    tools=[
-        {
-            "function_declarations": [
-                {
-                    "name": "register_user",
-                    "description": "Register a user with name, email, and date of birth",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "name": {"type": "string"},
-                            "email": {"type": "string"},
-                            "dob": {"type": "string"},
-                        },
-                        "required": ["name", "email", "dob"],
-                    },
-                },
-                {
-                    "name": "get_registrations",
-                    "description": "Get all registered users",
-                    "parameters": {"type": "object", "properties": {}},
-                },
-            ]
-        }
-    ],
-)
+# genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-chat = model.start_chat(history=[])
+# The Client automatically uses StreamableHttpTransport for HTTP URLs
+async def gemini_chat_model(user_message:str):
+    mcp_client = Client("http://127.0.0.1:8000/mcp")
+    gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 
-def handle_tool_call(name, args):
-    if name == "register_user":
-        print(f"📨 Registering user: {args}")
-        try:
-            resp = httpx.post("http://localhost:8000/register", json=dict(args))
-            resp.raise_for_status()
-            return f"✅ {args['name']} registered successfully."
-        except Exception as e:
-            return f"❌ Failed to register user: {str(e)}"
-
-    elif name == "get_all_users":
-        print("📨 Fetching all registrations...")
-        try:
-            resp = httpx.get("http://localhost:8000/registrations")
-            resp.raise_for_status()
-            users = resp.json()
-            if not users:
-                return "📂 No users found."
-            return "\n".join([f"{u['name']} ({u['email']}) - {u['dob']}" for u in users])
-        except Exception as e:
-            return f"❌ Failed to fetch users: {str(e)}"
-
-def run_gemini_chat(prompt):
-    response = chat.send_message(prompt)
-
-    if response.candidates[0].content.parts[0].function_call:
-        tool = response.candidates[0].content.parts[0].function_call
-        name = tool.name
-        args = tool.args
-        result = handle_tool_call(name, args)
-        print("🤖 Gemini Response:\n", result)
-    else:
-        print("🤖 Gemini Response:\n", response.text)
-
+    async with mcp_client:
+        response = await gemini_client.aio.models.generate_content(
+            model="gemini-1.5-flash-latest",
+            contents=user_message,
+            config=genai.types.GenerateContentConfig(
+                tools=[mcp_client.session],
+                temperature=0.2,
+            )
+        )
+        return response.text
+        
+async def main():
+    print("Talk to the Gemini LLM (type 'exit' to quit):")
+    while True:
+        user_input = input("You: ")
+        if user_input.lower() == "exit":
+            break
+        result = await gemini_chat_model(user_input)
+        print("Gemini:", result)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python app/llm_client.py 'Your prompt here'")
-    else:
-        prompt = " ".join(sys.argv[1:])
-        run_gemini_chat(prompt)
+    asyncio.run(main()) 
