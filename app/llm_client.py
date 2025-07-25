@@ -10,7 +10,7 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # The Client automatically uses StreamableHttpTransport for HTTP URLs
-async def gemini_chat_model(user_message:str):
+async def gemini_chat_model(user_message: str):
     mcp_client = Client("http://127.0.0.1:8000/mcp")
     gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 
@@ -19,20 +19,8 @@ async def gemini_chat_model(user_message:str):
             model="gemini-1.5-flash-latest",
             contents=user_message,
             config=genai.types.GenerateContentConfig(
-                tools=[mcp_client.session],
+                tools=[mcp_client.session],  # ✅ this gives Gemini access to all registered MCP tools
                 temperature=0.2,
             )
         )
         return response.text
-        
-async def main():
-    print("Talk to the Gemini LLM (type 'exit' to quit):")
-    while True:
-        user_input = input("You: ")
-        if user_input.lower() == "exit":
-            break
-        result = await gemini_chat_model(user_input)
-        print("Gemini:", result)
-
-if __name__ == "__main__":
-    asyncio.run(main()) 

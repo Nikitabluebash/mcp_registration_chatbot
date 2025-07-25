@@ -5,19 +5,13 @@ from csv_db import add_user, list_users
 mcp = FastMCP(name="User Registration server")
 
 
-@mcp.tool()
-def register_user(name: str, email: str, dob: str) -> dict:
-    """Register a new user"""
-    add_user(name, email, dob)
-    return {"status": "success", "message": f"User {name} registered successfully."}
+mcp.tool(description="""Register a new user by saving their info to a CSV.""")(add_user)
 
 
-@mcp.tool()
-def get_registrations() -> dict:
-    """Get all registered users"""
-    users = list_users()
-    return {"users": users}
-
+mcp.tool(description="""
+This tool fetches all previously stored user data from the CSV file and formats it for display.
+""")(list_users)
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
+    # Use "http" transport for simplicity and clearer debugging
+    mcp.run(transport="http", host="0.0.0.0", port=8000)

@@ -17,4 +17,4 @@ def add_user(name, email, dob):
 def list_users():
     init_csv()
     df = pd.read_csv(CSV_FILE)
-    return df.to_dict(orient="records")
+    return df.to_dict(orient="records") 
